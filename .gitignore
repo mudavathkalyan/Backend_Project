@@ -121,3 +121,5 @@ dist
 .DS_Store
 
 notes.md
+# Generated security pipeline output
+security-output/
