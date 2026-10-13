@@ -1,3 +1,4 @@
+
 name: Security Pipeline
 
 on:
@@ -9,16 +10,16 @@ permissions:
   contents: read
 
 jobs:
-  trivy-scan:
-    name: Trivy Security Scan
+  security:
+    name: Trivy Scan and STIX Conversion
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Scan repository
+      - name: Run Trivy security scan
         uses: aquasecurity/trivy-action@0.35.0
         with:
           scan-type: fs
@@ -30,11 +31,25 @@ jobs:
           output: trivy-report.json
           exit-code: "0"
 
-      - name: Upload security report
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install STIX dependencies
+        run: python -m pip install -r requirements-security.txt
+
+      - name: Process findings and generate STIX
+        run: python scripts/process_trivy.py trivy-report.json
+
+      - name: Upload security outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-report-${{ github.run_id }}
-          path: trivy-report.json
+          name: security-results-${{ github.run_id }}
+          path: |
+            trivy-report.json
+            security-output/summary.json
+            security-output/trivy-stix-2.1.json
           if-no-files-found: warn
           retention-days: 30
